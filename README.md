@@ -234,7 +234,6 @@ This distribution illustrates that decarbonization efforts cannot be uniform; in
 ### SQL query used:
 ```
 WITH handle AS (
-WITH handle AS (
   SELECT *
   FROM (
     SELECT *, 
@@ -274,3 +273,152 @@ Mitsubishi Gas Chemical Company, Inc. and Hino Motors, Ltd. represent specialize
 
 Lexmark International, Inc.’s presence highlights that emissions are not limited to heavy industry; electronics and technology companies also accumulate considerable footprints through globalized supply chains, mineral sourcing, and energy-intensive fabrication. This distribution of emissions points to the necessity of industry-specific decarbonization strategies. Targeting the highest contributors first—by redesigning products, adopting low-carbon materials, improving energy efficiency, and integrating renewable energy into production—offers the most immediate and substantial reductions in corporate carbon footprints.
 
+## What is the trend of carbon footprints (PCFs) over the years?
+### SQL query used:
+```
+WITH handle AS (
+  SELECT *
+  FROM (
+    SELECT *, 
+           ROW_NUMBER() OVER (PARTITION BY id) AS rn
+    FROM product_emissions pe
+  ) AS raw
+  WHERE raw.rn = 1
+)
+SELECT 
+    year,
+    COUNT(*) AS products_count,
+    AVG(CAST(carbon_footprint_pcf AS DECIMAL(15,2))) AS avg_carbon_footprint_pcf,
+    SUM(CAST(carbon_footprint_pcf AS DECIMAL(15,2))) AS total_carbon_footprint_pcf
+FROM handle
+WHERE carbon_footprint_pcf REGEXP '^[0-9]+(\\.[0-9]+)?$'
+GROUP BY year
+ORDER BY year;
+```
+
+result:
+|year|products_count|avg_carbon_footprint_pcf|total_carbon_footprint_pcf|
+|----|--------------|------------------------|--------------------------|
+|2013|179|2771.374302|496076.00|
+|2014|190|2885.415789|548229.00|
+|2015|217|49817.543779|10810407.00|
+|2016|218|7397.981651|1612760.00|
+|2017|62|3685.983871|228531.00|
+![image](https://github.com/Sans000ye/Carbon-Emissions-Analysis/blob/main/trendline%20chart.png?raw=true)
+The data shows the evolution of product carbon footprints (PCFs) between 2013 and 2017. In 2013, 179 products were recorded, with an average PCF of about 2,771 kg CO₂e and a total of roughly 496,000 kg CO₂e. By 2014 the number of products grew to 190, and both the average and total PCFs increased moderately, indicating a broader dataset and slightly higher carbon intensity per product.
+
+The most striking change occurs in 2015. Product count rose to 217, and the average PCF spiked dramatically to nearly 49,818 kg CO₂e, with a total footprint exceeding 10.8 million kg CO₂e. This suggests either the inclusion of extremely carbon-intensive products or much larger system boundaries in the reported figures. The spike may reflect a change in methodology or a shift in product mix — for example, including more heavy industrial or energy-intensive goods.
+
+By 2016, the number of products remained similar (218), but the average PCF fell to about 7,398 kg CO₂e and the total footprint dropped to 1.6 million kg CO₂e. This indicates a return to a less carbon-intensive mix or improved efficiency across the supply chain.
+
+In 2017, coverage fell sharply to 62 products. The average PCF rose slightly to 3,686 kg CO₂e, but the total footprint plummeted to only 228,531 kg CO₂e, suggesting either much less reporting or a focus on lower-impact items.
+
+## Which industry groups has demonstrated the most notable decrease in carbon footprints (PCFs) over time?
+
+```
+WITH handle AS (
+  SELECT *
+  FROM (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY id) AS rn
+    FROM product_emissions pe
+  ) AS raw
+  WHERE raw.rn = 1
+),
+numeric_pcf AS (
+  SELECT 
+      industry_group_id,
+      year,
+      CAST(carbon_footprint_pcf AS DECIMAL(15,2)) AS carbon_footprint_pcf
+  FROM handle
+  WHERE carbon_footprint_pcf REGEXP '^[0-9]+(\\.[0-9]+)?$'
+)
+SELECT 
+    industry_group_id,
+    year,
+    AVG(carbon_footprint_pcf) AS avg_pcf,
+    SUM(carbon_footprint_pcf) AS total_pcf,
+    COUNT(*) AS products_count
+FROM numeric_pcf
+GROUP BY industry_group_id, year
+ORDER BY industry_group_id, year;
+```
+
+result:
+|industry_group_id|year|avg_pcf|total_pcf|products_count|
+|-----------------|----|-------|---------|--------------|
+|1|2015|116.375000|931.00|8|
+|2|2013|107.700000|4308.00|40|
+|2|2014|126.437500|2023.00|16|
+|2|2015|0.000000|0.00|1|
+|2|2016|4529.045455|99639.00|22|
+|2|2017|143.727273|3162.00|22|
+|3|2015|685.307692|8909.00|13|
+|4|2015|2727.000000|8181.00|3|
+|5|2013|16135.500000|32271.00|2|
+|5|2014|40215.000000|40215.00|1|
+|6|2015|14.250000|228.00|16|
+|7|2013|26037.800000|130189.00|5|
+|7|2014|20910.454545|230015.00|11|
+|7|2015|37146.681818|817227.00|22|
+|7|2016|40138.085714|1404833.00|35|
+|8|2013|5465.181818|60117.00|11|
+|8|2014|10411.000000|93699.00|9|
+|8|2015|3505.000000|3505.00|1|
+|8|2016|796.125000|6369.00|8|
+|8|2017|23735.750000|94943.00|4|
+|9|2015|1549.620690|44939.00|29|
+|10|2013|136.166667|817.00|6|
+|10|2014|119.250000|477.00|4|
+|10|2016|96.333333|2890.00|30|
+|10|2017|370.500000|741.00|2|
+|11|2013|317.777778|2860.00|9|
+|11|2014|173.500000|3123.00|18|
+|11|2016|44.560000|1114.00|25|
+|12|2015|373.500000|2988.00|8|
+|13|2015|891050.727273|9801558.00|11|
+|14|2013|750.000000|750.00|1|
+|14|2016|2506.000000|10024.00|4|
+|15|2015|10.615385|138.00|13|
+|16|2014|77.300000|773.00|10|
+|16|2015|70.600000|706.00|10|
+|16|2016|0.500000|2.00|4|
+|17|2015|61.000000|61.00|1|
+|18|2013|0.000000|0.00|2|
+|19|2013|4321.422222|194464.00|45|
+|19|2014|1389.979167|66719.00|48|
+|19|2016|1085.736842|61887.00|57|
+|19|2017|9739.000000|107129.00|11|
+|20|2013|2411.250000|9645.00|4|
+|20|2014|2411.250000|9645.00|4|
+|20|2015|479.750000|1919.00|4|
+|20|2016|602.666667|1808.00|3|
+|21|2014|5.500000|11.00|2|
+|21|2015|5.500000|11.00|2|
+|22|2014|16.666667|50.00|3|
+|22|2016|2.000000|2.00|1|
+|23|2015|1.000000|3.00|3|
+|24|2013|1.500000|3.00|2|
+|24|2014|47.666667|143.00|3|
+|24|2015|1904.250000|22851.00|12|
+|24|2016|2538.444444|22846.00|9|
+|24|2017|690.000000|690.00|1|
+|25|2013|1210.780000|60539.00|50|
+|25|2014|1774.614035|101153.00|57|
+|25|2015|1995.893617|93807.00|47|
+|25|2016|67.631579|1285.00|19|
+|25|2017|993.909091|21866.00|22|
+|26|2013|52.000000|52.00|1|
+|26|2014|45.750000|183.00|4|
+|26|2015|45.750000|183.00|4|
+|27|2015|1011.000000|2022.00|2|
+|28|2015|1.000000|1.00|1|
+|29|2015|39.833333|239.00|6|
+|30|2013|61.000000|61.00|1|
+|30|2016|61.000000|61.00|1|
+
+This dataset shows how average and total product carbon footprints (PCFs) vary across industry groups and years, revealing large differences in industry size and emissions intensity. Some industries are consistently large, while others are highly volatile. For example, Industry 7 maintains very high total PCFs across 2013–2016, peaking at over 1.4 million in 2016, indicating both a large number of products (up to 35) and very high average PCFs per product. Similarly, Industry 13 records an extraordinary spike in 2015 (over 9.8 million total PCFs, with an average above 891,000), suggesting the inclusion of a few extremely carbon-intensive products.
+
+Conversely, several industries show steep declines. Industry 25 drops from more than 60,000 total PCFs in 2013 to just 1,285 in 2016, reflecting either a shift to low-impact products or far fewer reported items. Industry 16 shows an even more dramatic decrease in average PCFs—from 77 in 2014 to 0.5 in 2016—indicating significant emissions reductions or data changes. Industries such as 2, 8, and 19 fluctuate markedly, with some years of very high totals followed by large drops, which may reflect either improved processes or changes in reporting scope.
+
+Smaller industries (21, 22, 23, 28) have low totals and limited variation, showing they contribute relatively little to the overall carbon footprint picture. Overall, the data highlights a concentration of emissions in a few large industry groups and suggests that reductions in those sectors could yield the biggest impact on total PCFs over time.
